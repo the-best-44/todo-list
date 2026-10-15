@@ -1,0 +1,1977 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flowboard — Kanban</title>
+
+  <style>
+    :root {
+      --bg: #0b0b12;
+      --panel: #12121d;
+      --panel-2: #181827;
+      --panel-3: #202035;
+      --border: #2b2b42;
+      --text: #f4f2ff;
+      --muted: #9695b3;
+      --purple: #8b5cf6;
+      --purple-light: #a78bfa;
+      --purple-dark: #6d28d9;
+      --green: #34d399;
+      --orange: #fb923c;
+      --blue: #60a5fa;
+      --red: #fb7185;
+      --radius: 16px;
+      --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(139, 92, 246, .10), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--purple-light);
+      outline-offset: 2px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 238px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 25px 16px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 15, 25, .95);
+      border-right: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 0 10px;
+      margin-bottom: 36px;
+    }
+
+    .brand-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      color: white;
+      font-size: 21px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--purple), #5b21b6);
+      box-shadow: 0 6px 22px rgba(139, 92, 246, .25);
+    }
+
+    .brand-name {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -.7px;
+    }
+
+    .brand-name span {
+      color: var(--purple-light);
+    }
+
+    .workspace-label,
+    .nav-label {
+      color: #777692;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 0 12px;
+      margin-bottom: 12px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 11px;
+      padding: 12px;
+      color: var(--muted);
+      text-align: left;
+      background: transparent;
+      transition: .2s;
+    }
+
+    .nav-item:hover {
+      background: var(--panel-2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      color: white;
+      background: rgba(139, 92, 246, .15);
+      border-color: rgba(139, 92, 246, .24);
+    }
+
+    .nav-icon {
+      width: 19px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding: 16px 10px 0;
+    }
+
+    .storage-card {
+      padding: 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+    }
+
+    .storage-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .storage-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    /* MAIN */
+
+    .main {
+      min-width: 0;
+      padding: 28px 30px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .breadcrumb {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .breadcrumb span {
+      color: var(--purple-light);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 32px);
+      letter-spacing: -1.1px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 15px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      color: var(--text);
+      background: var(--panel-2);
+      transition: .2s;
+      white-space: nowrap;
+    }
+
+    .button:hover {
+      border-color: #51406f;
+      background: var(--panel-3);
+    }
+
+    .button.primary {
+      color: white;
+      border-color: var(--purple);
+      background: var(--purple);
+      font-weight: 700;
+    }
+
+    .button.primary:hover {
+      background: var(--purple-dark);
+    }
+
+    .button.danger {
+      color: #fda4af;
+    }
+
+    .button.small {
+      min-height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    /* METRICS */
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 26px;
+    }
+
+    .metric {
+      position: relative;
+      overflow: hidden;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(25, 25, 42, .96), rgba(17, 17, 28, .96));
+    }
+
+    .metric::after {
+      content: "";
+      position: absolute;
+      top: -35px;
+      right: -30px;
+      width: 95px;
+      height: 95px;
+      border-radius: 50%;
+      background: rgba(139, 92, 246, .08);
+      filter: blur(2px);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 13px;
+    }
+
+    .metric-value {
+      font-size: 29px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .metric-foot {
+      color: #777692;
+      font-size: 11px;
+      margin-top: 7px;
+    }
+
+    /* BOARD TOOLBAR */
+
+    .board-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .board-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .board-heading .symbol {
+      color: var(--purple-light);
+      font-size: 20px;
+    }
+
+    .toolbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      min-height: 39px;
+      width: 220px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .search-box span {
+      color: var(--muted);
+    }
+
+    .search-box input {
+      width: 100%;
+      min-width: 0;
+      color: var(--text);
+      border: none;
+      outline: none;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #777692;
+    }
+
+    .select-control {
+      min-height: 39px;
+      padding: 0 11px;
+      max-width: 190px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    /* KANBAN */
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(245px, 1fr));
+      align-items: start;
+      gap: 15px;
+      overflow-x: auto;
+      padding-bottom: 20px;
+    }
+
+    .column {
+      min-width: 0;
+      min-height: 360px;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: rgba(17, 17, 28, .77);
+      transition: border-color .2s, background .2s;
+    }
+
+    .column.drag-over {
+      border-color: var(--purple);
+      background: rgba(139, 92, 246, .08);
+    }
+
+    .column-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 3px 2px 14px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .column-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+    }
+
+    .status-dot.todo { background: var(--blue); }
+    .status-dot.progress { background: var(--purple-light); }
+    .status-dot.review { background: var(--orange); }
+    .status-dot.done { background: var(--green); }
+
+    .column-title {
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .column-count {
+      display: grid;
+      place-items: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 6px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 8px;
+      font-size: 11px;
+    }
+
+    .column-add {
+      width: 29px;
+      height: 29px;
+      display: grid;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 19px;
+    }
+
+    .column-add:hover {
+      color: white;
+      border-color: var(--border);
+      background: var(--panel-3);
+    }
+
+    .cards {
+      display: grid;
+      gap: 11px;
+      min-height: 260px;
+    }
+
+    .task-card {
+      padding: 14px;
+      border: 1px solid #303047;
+      border-radius: 12px;
+      background: linear-gradient(150deg, #1c1c2d, #161622);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+      cursor: grab;
+      transition: transform .18s, border-color .18s, box-shadow .18s;
+    }
+
+    .task-card:hover {
+      transform: translateY(-2px);
+      border-color: #5a447d;
+      box-shadow: var(--shadow);
+    }
+
+    .task-card:active {
+      cursor: grabbing;
+    }
+
+    .task-card.dragging {
+      opacity: .45;
+      transform: rotate(1deg);
+    }
+
+    .task-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 11px;
+    }
+
+    .priority {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .priority.low {
+      color: #93c5fd;
+      background: rgba(96, 165, 250, .12);
+    }
+
+    .priority.medium {
+      color: #fcd34d;
+      background: rgba(251, 191, 36, .12);
+    }
+
+    .priority.high {
+      color: #fda4af;
+      background: rgba(251, 113, 133, .12);
+    }
+
+    .card-menu {
+      display: flex;
+      gap: 3px;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 27px;
+      height: 27px;
+      color: var(--muted);
+      border: 1px solid transparent;
+      border-radius: 7px;
+      background: transparent;
+    }
+
+    .icon-button:hover {
+      color: white;
+      background: var(--panel-3);
+      border-color: var(--border);
+    }
+
+    .task-title {
+      margin: 0 0 8px;
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+
+    .task-description {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin: 0 0 13px;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .task-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 13px;
+    }
+
+    .tag {
+      padding: 5px 7px;
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, .11);
+      border: 1px solid rgba(139, 92, 246, .17);
+      border-radius: 6px;
+      font-size: 10px;
+    }
+
+    .task-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 9px;
+      padding-top: 11px;
+      border-top: 1px solid #2a2a3d;
+    }
+
+    .assignee {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      flex: 0 0 auto;
+      border-radius: 9px;
+      color: #e9ddff;
+      background: #40305f;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .due-date {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .due-date.overdue {
+      color: var(--red);
+    }
+
+    .card-move {
+      width: 100%;
+      margin-top: 11px;
+      padding: 8px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #141420;
+      font-size: 11px;
+    }
+
+    .card-move:hover {
+      color: var(--text);
+      border-color: #51406f;
+    }
+
+    .empty-column {
+      display: grid;
+      place-items: center;
+      min-height: 110px;
+      padding: 20px 12px;
+      border: 1px dashed #35354b;
+      border-radius: 10px;
+      color: #777692;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .board-empty {
+      grid-column: 1 / -1;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 15px;
+      background: var(--panel);
+    }
+
+    .board-empty strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 17px;
+    }
+
+    .board-empty p {
+      line-height: 1.6;
+    }
+
+    /* MODALS */
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, .7);
+      backdrop-filter: blur(7px);
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(100%, 560px);
+      max-height: min(90vh, 800px);
+      overflow-y: auto;
+      border: 1px solid #38334e;
+      border-radius: 18px;
+      background: #13131f;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, .5);
+    }
+
+    .modal.wide {
+      width: min(100%, 740px);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 21px 23px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -.4px;
+    }
+
+    .modal-body {
+      padding: 23px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 9px;
+      flex-wrap: wrap;
+      padding: 16px 23px;
+      border-top: 1px solid var(--border);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 17px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      color: #c5c3db;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #0f0f19;
+    }
+
+    .field textarea {
+      min-height: 100px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+
+    .field input::placeholder,
+    .field textarea::placeholder {
+      color: #696984;
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .json-example {
+      margin-top: 14px;
+      padding: 14px;
+      overflow-x: auto;
+      color: #d8ccff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b0b13;
+      font-size: 11px;
+      line-height: 1.7;
+      white-space: pre;
+    }
+
+    .import-options {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .import-options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .import-options input {
+      accent-color: var(--purple);
+    }
+
+    .toast-container {
+      position: fixed;
+      z-index: 100;
+      right: 20px;
+      bottom: 20px;
+      display: grid;
+      gap: 9px;
+    }
+
+    .toast {
+      max-width: min(390px, calc(100vw - 40px));
+      padding: 13px 16px;
+      color: var(--text);
+      border: 1px solid #494065;
+      border-radius: 11px;
+      background: #1b192a;
+      box-shadow: var(--shadow);
+      animation: toast-in .2s ease-out;
+    }
+
+    .toast.error {
+      border-color: #783b4b;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      color: #686783;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    @media (max-width: 1250px) {
+      .board {
+        grid-template-columns: repeat(4, minmax(230px, 1fr));
+      }
+
+      .main {
+        padding: 24px 20px 35px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 72px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        padding: 20px 9px;
+        align-items: center;
+      }
+
+      .brand {
+        padding: 0;
+        margin-bottom: 32px;
+      }
+
+      .brand-name,
+      .workspace-label,
+      .nav-text,
+      .sidebar-bottom {
+        display: none;
+      }
+
+      .nav {
+        width: 100%;
+      }
+
+      .nav-item {
+        justify-content: center;
+        padding: 12px 4px;
+      }
+
+      .nav-icon {
+        font-size: 19px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .board {
+        grid-template-columns: repeat(4, minmax(245px, 1fr));
+      }
+    }
+
+    @media (max-width: 600px) {
+      .app {
+        display: block;
+      }
+
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 12px 14px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand {
+        margin: 0 0 12px;
+      }
+
+      .brand-name {
+        display: block;
+      }
+
+      .nav {
+        display: flex;
+        overflow-x: auto;
+        gap: 6px;
+      }
+
+      .nav-item {
+        flex: 0 0 auto;
+        width: auto;
+        padding: 9px 11px;
+      }
+
+      .nav-text {
+        display: inline;
+        font-size: 12px;
+      }
+
+      .main {
+        padding: 21px 14px 30px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-bottom: 22px;
+      }
+
+      .top-actions {
+        width: 100%;
+      }
+
+      .top-actions .button {
+        flex: 1;
+      }
+
+      .metrics {
+        gap: 9px;
+      }
+
+      .metric {
+        padding: 14px;
+      }
+
+      .metric-value {
+        font-size: 24px;
+      }
+
+      .board-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .toolbar-controls {
+        width: 100%;
+      }
+
+      .search-box {
+        width: 100%;
+        flex: 1 1 100%;
+      }
+
+      .select-control {
+        max-width: none;
+        flex: 1;
+      }
+
+      .board {
+        grid-template-columns: repeat(4, minmax(265px, 82vw));
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .field.full {
+        grid-column: auto;
+      }
+
+      .modal-body {
+        padding: 17px;
+      }
+
+      .modal-header,
+      .modal-footer {
+        padding-left: 17px;
+        padding-right: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">F</div>
+        <div class="brand-name">flow<span>board</span></div>
+      </div>
+
+      <div class="workspace-label">Workspace</div>
+
+      <nav class="nav">
+        <button class="nav-item active" type="button">
+          <span class="nav-icon">▦</span>
+          <span class="nav-text">Kanban</span>
+        </button>
+
+        <button class="nav-item" type="button" id="navImport">
+          <span class="nav-icon">⇅</span>
+          <span class="nav-text">Import / Export</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="storage-card">
+          <strong>✦ Il tuo spazio</strong>
+          <p>Le tue attività vengono salvate automaticamente nel browser.</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="breadcrumb">Workspace / <span>Kanban</span></div>
+          <h1>Project Board</h1>
+        </div>
+
+        <div class="top-actions">
+          <button class="button" id="importButton" type="button">
+            ⇧ Importa JSON
+          </button>
+          <button class="button primary" id="addTaskButton" type="button">
+            <span>＋</span> Nuova attività
+          </button>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Statistiche delle attività">
+        <div class="metric">
+          <div class="metric-label">Attività totali</div>
+          <div class="metric-value" id="metricTotal">0</div>
+          <div class="metric-foot">Nel tuo workspace</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Da fare</div>
+          <div class="metric-value" id="metricTodo">0</div>
+          <div class="metric-foot">Attività in attesa</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">In corso</div>
+          <div class="metric-value" id="metricProgress">0</div>
+          <div class="metric-foot">Attività attive</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Completate</div>
+          <div class="metric-value" id="metricDone">0</div>
+          <div class="metric-foot">Attività concluse</div>
+        </div>
+      </section>
+
+      <section class="board-section">
+        <div class="board-toolbar">
+          <div class="board-heading">
+            <span class="symbol">▦</span>
+            <span>Kanban Board</span>
+          </div>
+
+          <div class="toolbar-controls">
+            <label class="search-box">
+              <span>⌕</span>
+              <input id="searchInput" type="search" placeholder="Cerca attività..." />
+            </label>
+
+            <select class="select-control" id="priorityFilter" aria-label="Filtra per priorità">
+              <option value="all">Tutte le priorità</option>
+              <option value="high">Alta priorità</option>
+              <option value="medium">Media priorità</option>
+              <option value="low">Bassa priorità</option>
+            </select>
+
+            <button class="button" id="exportButton" type="button">
+              ⇩ Esporta JSON
+            </button>
+          </div>
+        </div>
+
+        <div class="board" id="board">
+          <!-- Le colonne Kanban vengono create da JavaScript -->
+        </div>
+
+        <div class="footer-note">
+          Trascina le schede tra le colonne oppure usa il menu in fondo a ogni scheda.
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALE CREA / MODIFICA ATTIVITÀ -->
+
+  <div class="modal-backdrop" id="taskModalBackdrop">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+      <div class="modal-header">
+        <h2 id="taskModalTitle">Nuova attività</h2>
+        <button class="icon-button" id="closeTaskModal" type="button" aria-label="Chiudi">✕</button>
+      </div>
+
+      <form id="taskForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="taskTitle">Titolo *</label>
+              <input id="taskTitle" name="title" required maxlength="160"
+                     placeholder="Es. Progettare la nuova dashboard" />
+            </div>
+
+            <div class="field full">
+              <label for="taskDescription">Descrizione</label>
+              <textarea id="taskDescription" name="description"
+                        placeholder="Aggiungi dettagli sull'attività..."></textarea>
+            </div>
+
+            <div class="field">
+              <label for="taskStatus">Stato</label>
+              <select id="taskStatus" name="status">
+                <option value="todo">Da fare</option>
+                <option value="progress">In corso</option>
+                <option value="review">In revisione</option>
+                <option value="done">Completate</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="taskPriority">Priorità</label>
+              <select id="taskPriority" name="priority">
+                <option value="low">Bassa</option>
+                <option value="medium" selected>Media</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="taskAssignee">Assegnatario</label>
+              <input id="taskAssignee" name="assignee" maxlength="80"
+                     placeholder="Facoltativo" />
+            </div>
+
+            <div class="field">
+              <label for="taskDueDate">Scadenza</label>
+              <input id="taskDueDate" name="dueDate" type="date" />
+            </div>
+
+            <div class="field full">
+              <label for="taskTags">Tag</label>
+              <input id="taskTags" name="tags"
+                     placeholder="Design, Sviluppo, Marketing" />
+              <div class="helper">Separa i tag con una virgola.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="button" id="cancelTaskModal" type="button">Annulla</button>
+          <button class="button primary" type="submit">Salva attività</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- MODALE IMPORT / EXPORT JSON -->
+
+  <div class="modal-backdrop" id="jsonModalBackdrop">
+    <section class="modal wide" role="dialog" aria-modal="true" aria-labelledby="jsonModalTitle">
+      <div class="modal-header">
+        <h2 id="jsonModalTitle">Importa / Esporta JSON</h2>
+        <button class="icon-button" id="closeJsonModal" type="button" aria-label="Chiudi">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <label for="jsonInput">Contenuto JSON</label>
+          <textarea id="jsonInput" spellcheck="false"
+                    placeholder="Incolla qui il tuo JSON oppure usa Esporta per ottenere i dati attuali."></textarea>
+          <div class="helper">
+            Puoi importare un array di attività oppure un oggetto contenente una proprietà
+            <code>tasks</code>.
+          </div>
+        </div>
+
+        <div class="import-options">
+          <label>
+            <input type="radio" name="importMode" value="replace" checked />
+            Sostituisci le attività esistenti
+          </label>
+
+          <label>
+            <input type="radio" name="importMode" value="merge" />
+            Aggiungi alle attività esistenti
+          </label>
+        </div>
+
+        <div class="json-example">[
+  {
+    "title": "Preparare la presentazione",
+    "description": "Completare le slide del progetto",
+    "status": "todo",
+    "priority": "high",
+    "assignee": "Mario",
+    "dueDate": "2026-11-20",
+    "tags": ["Design", "Progetto"]
+  },
+  {
+    "title": "Verificare il prototipo",
+    "status": "progress",
+    "priority": "medium",
+    "tags": ["Sviluppo"]
+  }
+]</div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="button" id="cancelJsonModal" type="button">Chiudi</button>
+        <button class="button" id="downloadJsonButton" type="button">⇩ Scarica JSON</button>
+        <button class="button primary" id="applyImportButton" type="button">Importa attività</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const STORAGE_KEY = "flowboard_kanban_tasks_v1";
+
+    const STATUSES = [
+      { id: "todo", title: "Da fare", className: "todo" },
+      { id: "progress", title: "In corso", className: "progress" },
+      { id: "review", title: "In revisione", className: "review" },
+      { id: "done", title: "Completate", className: "done" }
+    ];
+
+    const PRIORITIES = {
+      low: { label: "Bassa", symbol: "↓" },
+      medium: { label: "Media", symbol: "◆" },
+      high: { label: "Alta", symbol: "↑" }
+    };
+
+    let tasks = loadTasks();
+    let editingTaskId = null;
+    let draggedTaskId = null;
+
+    const board = document.getElementById("board");
+    const taskModalBackdrop = document.getElementById("taskModalBackdrop");
+    const jsonModalBackdrop = document.getElementById("jsonModalBackdrop");
+    const taskForm = document.getElementById("taskForm");
+    const jsonInput = document.getElementById("jsonInput");
+
+    function createId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+
+      return "task-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+    }
+
+    function normaliseTask(raw) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        throw new Error("Ogni attività deve essere un oggetto JSON.");
+      }
+
+      const title = String(raw.title ?? raw.name ?? "").trim();
+
+      if (!title) {
+        throw new Error("Ogni attività deve avere un titolo.");
+      }
+
+      const validStatuses = STATUSES.map(status => status.id);
+      const status = validStatuses.includes(raw.status) ? raw.status : "todo";
+
+      const validPriorities = Object.keys(PRIORITIES);
+      const priority = validPriorities.includes(raw.priority) ? raw.priority : "medium";
+
+      let tags = raw.tags ?? [];
+
+      if (typeof tags === "string") {
+        tags = tags.split(",");
+      }
+
+      if (!Array.isArray(tags)) {
+        tags = [];
+      }
+
+      return {
+        id: String(raw.id || createId()),
+        title: title.slice(0, 160),
+        description: String(raw.description ?? "").slice(0, 5000),
+        status,
+        priority,
+        assignee: String(raw.assignee ?? "").trim().slice(0, 80),
+        dueDate: isValidDate(raw.dueDate) ? raw.dueDate : "",
+        tags: tags
+          .map(tag => String(tag).trim())
+          .filter(Boolean)
+          .slice(0, 20),
+        createdAt: raw.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function isValidDate(value) {
+      if (typeof value !== "string" || !value) return false;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+      const date = new Date(value + "T00:00:00");
+      return !Number.isNaN(date.getTime()) &&
+        date.toISOString().slice(0, 10) === value;
+    }
+
+    function loadTasks() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return [];
+
+        const parsed = JSON.parse(stored);
+        const list = Array.isArray(parsed) ? parsed : parsed.tasks;
+
+        if (!Array.isArray(list)) return [];
+
+        return list.map(normaliseTask);
+      } catch (error) {
+        console.warn("Impossibile leggere le attività salvate:", error);
+        return [];
+      }
+    }
+
+    function saveTasks() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      } catch (error) {
+        showToast("Non è stato possibile salvare nel browser.", true);
+      }
+    }
+
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[character]);
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+
+      const date = new Date(value + "T00:00:00");
+
+      if (Number.isNaN(date.getTime())) return value;
+
+      return new Intl.DateTimeFormat("it-IT", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }).format(date);
+    }
+
+    function isOverdue(task) {
+      if (!task.dueDate || task.status === "done") return false;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      return new Date(task.dueDate + "T00:00:00") < today;
+    }
+
+    function getInitials(name) {
+      const trimmed = String(name || "").trim();
+
+      if (!trimmed) return "";
+
+      return trimmed
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(part => part[0].toUpperCase())
+        .join("");
+    }
+
+    function getFilteredTasks() {
+      const search = document.getElementById("searchInput").value
+        .trim()
+        .toLocaleLowerCase("it");
+
+      const priority = document.getElementById("priorityFilter").value;
+
+      return tasks.filter(task => {
+        const matchesPriority = priority === "all" || task.priority === priority;
+
+        const haystack = [
+          task.title,
+          task.description,
+          task.assignee,
+          ...task.tags
+        ].join(" ").toLocaleLowerCase("it");
+
+        const matchesSearch = !search || haystack.includes(search);
+
+        return matchesPriority && matchesSearch;
+      });
+    }
+
+    function renderMetrics() {
+      document.getElementById("metricTotal").textContent = tasks.length;
+      document.getElementById("metricTodo").textContent =
+        tasks.filter(task => task.status === "todo").length;
+      document.getElementById("metricProgress").textContent =
+        tasks.filter(task => task.status === "progress").length;
+      document.getElementById("metricDone").textContent =
+        tasks.filter(task => task.status === "done").length;
+    }
+
+    function renderCard(task) {
+      const priority = PRIORITIES[task.priority] || PRIORITIES.medium;
+      const overdue = isOverdue(task);
+      const assignee = task.assignee
+        ? `
+          <div class="assignee" title="${escapeHTML(task.assignee)}">
+            <span class="avatar">${escapeHTML(getInitials(task.assignee))}</span>
+            <span>${escapeHTML(task.assignee)}</span>
+          </div>
+        `
+        : `
+          <div class="assignee">
+            <span class="avatar">＋</span>
+            <span>Non assegnata</span>
+          </div>
+        `;
+
+      const dueDate = task.dueDate
+        ? `<span class="due-date ${overdue ? "overdue" : ""}">
+            ${overdue ? "⚠ " : "◷ "}${escapeHTML(formatDate(task.dueDate))}
+          </span>`
+        : "";
+
+      const tags = task.tags.length
+        ? `<div class="task-tags">
+            ${task.tags.map(tag => `<span class="tag">${escapeHTML(tag)}</span>`).join("")}
+          </div>`
+        : "";
+
+      const description = task.description
+        ? `<p class="task-description">${escapeHTML(task.description)}</p>`
+        : "";
+
+      const statusOptions = STATUSES.map(status => `
+        <option value="${status.id}" ${status.id === task.status ? "selected" : ""}>
+          Sposta in: ${status.title}
+        </option>
+      `).join("");
+
+      return `
+        <article class="task-card"
+          draggable="true"
+          data-task-id="${escapeHTML(task.id)}"
+          tabindex="0"
+          aria-label="Attività: ${escapeHTML(task.title)}">
+
+          <div class="task-card-top">
+            <span class="priority ${escapeHTML(task.priority)}">
+              ${priority.symbol} ${priority.label}
+            </span>
+
+            <div class="card-menu">
+              <button class="icon-button edit-task"
+                type="button"
+                data-action="edit"
+                data-id="${escapeHTML(task.id)}"
+                aria-label="Modifica attività"
+                title="Modifica">✎</button>
+
+              <button class="icon-button delete-task"
+                type="button"
+                data-action="delete"
+                data-id="${escapeHTML(task.id)}"
+                aria-label="Elimina attività"
+                title="Elimina">×</button>
+            </div>
+          </div>
+
+          <h3 class="task-title">${escapeHTML(task.title)}</h3>
+          ${description}
+          ${tags}
+
+          <div class="task-footer">
+            ${assignee}
+            ${dueDate}
+          </div>
+
+          <select class="card-move"
+            data-action="move"
+            data-id="${escapeHTML(task.id)}"
+            aria-label="Cambia stato dell'attività">
+            ${statusOptions}
+          </select>
+        </article>
+      `;
+    }
+
+    function render() {
+      renderMetrics();
+
+      const filteredTasks = getFilteredTasks();
+
+      board.innerHTML = STATUSES.map(status => {
+        const columnTasks = filteredTasks.filter(task => task.status === status.id);
+
+        const cardsHTML = columnTasks.length
+          ? columnTasks.map(renderCard).join("")
+          : `<div class="empty-column">Nessuna attività in questa colonna</div>`;
+
+        return `
+          <section class="column"
+            data-status="${status.id}"
+            aria-label="Colonna ${status.title}">
+
+            <header class="column-header">
+              <div class="column-title-wrap">
+                <span class="status-dot ${status.className}"></span>
+                <span class="column-title">${status.title}</span>
+                <span class="column-count">${columnTasks.length}</span>
+              </div>
+
+              <button class="column-add"
+                type="button"
+                data-action="add"
+                data-status="${status.id}"
+                aria-label="Aggiungi attività in ${status.title}"
+                title="Aggiungi attività">＋</button>
+            </header>
+
+            <div class="cards" data-drop-status="${status.id}">
+              ${cardsHTML}
+            </div>
+          </section>
+        `;
+      }).join("");
+
+      if (filteredTasks.length === 0) {
+        const hasFilters =
+          document.getElementById("searchInput").value.trim() ||
+          document.getElementById("priorityFilter").value !== "all";
+
+        if (hasFilters) {
+          board.innerHTML = `
+            <div class="board-empty">
+              <strong>Nessuna attività trovata</strong>
+              <p>Prova a modificare la ricerca o il filtro selezionato.</p>
+              <button class="button" type="button" id="clearFiltersButton">
+                Cancella filtri
+              </button>
+            </div>
+          `;
+        } else {
+          board.innerHTML = `
+            <div class="board-empty">
+              <strong>Il tuo Kanban è pronto</strong>
+              <p>Non ci sono ancora attività. Crea la prima scheda oppure importa un file JSON.</p>
+              <button class="button primary" type="button" id="emptyAddButton">
+                ＋ Crea la prima attività
+              </button>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function showToast(message, isError = false) {
+      const toast = document.createElement("div");
+      toast.className = "toast" + (isError ? " error" : "");
+      toast.textContent = message;
+
+      document.getElementById("toastContainer").appendChild(toast);
+
+      window.setTimeout(() => toast.remove(), 3500);
+    }
+
+    function openTaskModal(task = null, defaultStatus = "todo") {
+      editingTaskId = task ? task.id : null;
+      taskForm.reset();
+
+      document.getElementById("taskModalTitle").textContent =
+        task ? "Modifica attività" : "Nuova attività";
+
+      document.getElementById("taskTitle").value = task?.title || "";
+      document.getElementById("taskDescription").value = task?.description || "";
+      document.getElementById("taskStatus").value = task?.status || defaultStatus;
+      document.getElementById("taskPriority").value = task?.priority || "medium";
+      document.getElementById("taskAssignee").value = task?.assignee || "";
+      document.getElementById("taskDueDate").value = task?.dueDate || "";
+      document.getElementById("taskTags").value = task?.tags?.join(", ") || "";
+
+      taskModalBackdrop.classList.add("open");
+      window.setTimeout(() => document.getElementById("taskTitle").focus(), 50);
+    }
+
+    function closeTaskModal() {
+      taskModalBackdrop.classList.remove("open");
+      editingTaskId = null;
+    }
+
+    function openJsonModal() {
+      jsonInput.value = "";
+      jsonModalBackdrop.classList.add("open");
+      window.setTimeout(() => jsonInput.focus(), 50);
+    }
+
+    function closeJsonModal() {
+      jsonModalBackdrop.classList.remove("open");
+    }
+
+    function downloadFile(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJSON() {
+      const content = JSON.stringify({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        tasks
+      }, null, 2);
+
+      downloadFile("flowboard-tasks.json", content, "application/json;charset=utf-8");
+      showToast("Esportazione JSON completata.");
+    }
+
+    function importJSON() {
+      let parsed;
+
+      try {
+        parsed = JSON.parse(jsonInput.value);
+      } catch (error) {
+        showToast("JSON non valido. Controlla la sintassi.", true);
+        return;
+      }
+
+      const importedList = Array.isArray(parsed) ? parsed : parsed?.tasks;
+
+      if (!Array.isArray(importedList)) {
+        showToast("Il JSON deve contenere un array di attività o una proprietà tasks.", true);
+        return;
+      }
+
+      let importedTasks;
+
+      try {
+        importedTasks = importedList.map(normaliseTask);
+      } catch (error) {
+        showToast(error.message || "Le attività importate non sono valide.", true);
+        return;
+      }
+
+      const mode = document.querySelector('input[name="importMode"]:checked').value;
+
+      if (mode === "replace") {
+        tasks = importedTasks;
+      } else {
+        const existingIds = new Set(tasks.map(task => task.id));
+
+        const uniqueImported = importedTasks.map(task => {
+          if (existingIds.has(task.id)) {
+            return { ...task, id: createId() };
+          }
+
+          existingIds.add(task.id);
+          return task;
+        });
+
+        tasks = [...tasks, ...uniqueImported];
+      }
+
+      saveTasks();
+      render();
+      closeJsonModal();
+
+      showToast(`${importedTasks.length} attività importate.`);
+    }
+
+    function deleteTask(id) {
+      const task = tasks.find(item => item.id === id);
+      if (!task) return;
+
+      const confirmed = window.confirm(`Vuoi eliminare "${task.title}"?`);
+      if (!confirmed) return;
+
+      tasks = tasks.filter(item => item.id !== id);
+      saveTasks();
+      render();
+      showToast("Attività eliminata.");
+    }
+
+    function moveTask(id, newStatus) {
+      if (!STATUSES.some(status => status.id === newStatus)) return;
+
+      const task = tasks.find(item => item.id === id);
+      if (!task || task.status === newStatus) return;
+
+      task.status = newStatus;
+      task.updatedAt = new Date().toISOString();
+
+      saveTasks();
+      render();
+    }
+
+    taskForm.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const formData = new FormData(taskForm);
+
+      const rawTask = {
+        title: formData.get("title"),
+        description: formData.get("description"),
+        status: formData.get("status"),
+        priority: formData.get("priority"),
+        assignee: formData.get("assignee"),
+        dueDate: formData.get("dueDate"),
+        tags: String(formData.get("tags") || "")
+          .split(",")
+          .map(tag => tag.trim())
+          .filter(Boolean)
+      };
+
+      if (editingTaskId) {
+        const index = tasks.findIndex(task => task.id === editingTaskId);
+
+        if (index !== -1) {
+          tasks[index] = normaliseTask({
+            ...tasks[index],
+            ...rawTask,
+            id: editingTaskId,
+            createdAt: tasks[index].createdAt,
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+        showToast("Attività aggiornata.");
+      } else {
+        tasks.unshift(normaliseTask({
+          ...rawTask,
+          id: createId(),
+          createdAt: new Date().toISOString()
+        }));
+
+        showToast("Attività creata.");
+      }
+
+      saveTasks();
+      render();
+      closeTaskModal();
+    });
+
+    document.getElementById("addTaskButton").addEventListener("click", () => {
+      openTaskModal();
+    });
+
+    document.getElementById("importButton").addEventListener("click", openJsonModal);
+    document.getElementById("navImport").addEventListener("click", openJsonModal);
+    document.getElementById("exportButton").addEventListener("click", exportJSON);
+
+    document.getElementById("downloadJsonButton").addEventListener("click", () => {
+      jsonInput.value = JSON.stringify({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        tasks
+      }, null, 2);
+
+      downloadFile(
+        "flowboard-tasks.json",
+        jsonInput.value,
+        "application/json;charset=utf-8"
+      );
+
+      showToast("File JSON scaricato.");
+    });
+
+    document.getElementById("applyImportButton").addEventListener("click", importJSON);
+
+    document.getElementById("closeTaskModal").addEventListener("click", closeTaskModal);
+    document.getElementById("cancelTaskModal").addEventListener("click", closeTaskModal);
+    document.getElementById("closeJsonModal").addEventListener("click", closeJsonModal);
+    document.getElementById("cancelJsonModal").addEventListener("click", closeJsonModal);
+
+    taskModalBackdrop.addEventListener("click", event => {
+      if (event.target === taskModalBackdrop) closeTaskModal();
+    });
+
+    jsonModalBackdrop.addEventListener("click", event => {
+      if (event.target === jsonModalBackdrop) closeJsonModal();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        closeTaskModal();
+        closeJsonModal();
+      }
+    });
+
+    document.getElementById("searchInput").addEventListener("input", render);
+    document.getElementById("priorityFilter").addEventListener("change", render);
+
+    board.addEventListener("click", event => {
+      const actionButton = event.target.closest("[data-action]");
+
+      if (actionButton) {
+        const action = actionButton.dataset.action;
+
+        if (action === "add") {
+          openTaskModal(null, actionButton.dataset.status);
+          return;
+        }
+
+        if (action === "edit") {
+          const task = tasks.find(item => item.id === actionButton.dataset.id);
+          if (task) openTaskModal(task);
+          return;
+        }
+
+        if (action === "delete") {
+          deleteTask(actionButton.dataset.id);
+          return;
+        }
+      }
+
+      if (event.target.closest("select")) return;
+
+      const card = event.target.closest(".task-card");
+
+      if (card) {
+        const task = tasks.find(item => item.id === card.dataset.taskId);
+        if (task) openTaskModal(task);
+      }
+
+      if (event.target.id === "emptyAddButton") {
+        openTaskModal();
+      }
+
+      if (event.target.id === "clearFiltersButton") {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("priorityFilter").value = "all";
+        render();
+      }
+    });
+
+    board.addEventListener("change", event => {
+      const select = event.target.closest('[data-action="move"]');
+      if (!select) return;
+
+      moveTask(select.dataset.id, select.value);
+    });
+
+    board.addEventListener("dragstart", event => {
+      const card = event.target.closest(".task-card");
+      if (!card) return;
+
+      draggedTaskId = card.dataset.taskId;
+      card.classList.add("dragging");
+
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", draggedTaskId);
+      }
+    });
+
+    board.addEventListener("dragend", event => {
+      const card = event.target.closest(".task-card");
+      if (card) card.classList.remove("dragging");
+
+      draggedTaskId = null;
+      board.querySelectorAll(".column").forEach(column => {
+        column.classList.remove("drag-over");
+      });
+    });
+
+    board.addEventListener("dragover", event => {
+      const column = event.target.closest(".column");
+      if (!column) return;
+
+      event.preventDefault();
+      column.classList.add("drag-over");
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
+    });
+
+    board.addEventListener("dragleave", event => {
+      const column = event.target.closest(".column");
+      if (!column) return;
+
+      if (!column.contains(event.relatedTarget)) {
+        column.classList.remove("drag-over");
+      }
+    });
+
+    board.addEventListener("drop", event => {
+      const column = event.target.closest(".column");
+      if (!column) return;
+
+      event.preventDefault();
+      column.classList.remove("drag-over");
+
+      const id = draggedTaskId ||
+        (event.dataTransfer && event.dataTransfer.getData("text/plain"));
+
+      if (id) {
+        moveTask(id, column.dataset.status);
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
